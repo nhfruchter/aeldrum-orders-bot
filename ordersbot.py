@@ -2,8 +2,9 @@ import discord
 import os
 import re
 
-client = discord.Client()
-
+intents = discord.Intents.default()
+intents.members = True
+client = discord.Client(intents=intents)
 
 async def files_from_attachments(attachments):
     """Extract each individual file from a message so it can be moved over by the bot."""
@@ -13,6 +14,11 @@ async def files_from_attachments(attachments):
         files.append(await attachment.to_file())
     return files
 
+async def get_default_role(member_id):
+  server = client.get_guild(int(os.getenv("AELDRUM_SERVER_ID")))
+  member = server.get_member(member_id)
+  return member.top_role
+
 
 @client.event
 async def on_message(message):
@@ -21,6 +27,10 @@ async def on_message(message):
     # Ignore self
     if message.author == client.user:
         return
+
+    # Accept requests only from valid sources
+    if message.channel.type != discord.ChannelType.private and message.guild.id != int(os.getenv("AELDRUM_SERVER_ID")):
+      return
 
     # Identify the channel that orders will be sent to
     order_channel_id = os.getenv("ORDERS_CHANNEL_ID")
@@ -48,7 +58,7 @@ async def on_message(message):
         affiliation = (
             args[0].replace("[", "").replace("]", "")
             if args[0]
-            else message.author.top_role
+            else getattr(message.author, 'top_role', await get_default_role(message.author.id))
         )
 
         # Create fancy Discord embed
