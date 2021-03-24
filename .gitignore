@@ -123,3 +123,7 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+credentials.json
+token.json
+Pipfile.lock
+Pipfile

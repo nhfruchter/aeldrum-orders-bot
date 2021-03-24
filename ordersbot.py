@@ -137,7 +137,19 @@ async def on_message(message):
             await order_channel.send(embed=out_message, files=files)
             await message.add_reaction("👍")
             
-
+            if LOG_TO_SHEET:
+                # Currently: Timestamp, Turn, Faction, Author, Content,	Attachments
+                update_row = [
+                    datetime.datetime.now().strftime("%x %X"),
+                    order_turn,
+                    str(affiliation),
+                    message.author.display_name,
+                    content,
+                    " ".join([a.url for a in message.attachments]) or ""
+                ]
+                logging.debug("Sent update to sheet %s" % update_row)
+                sheetslogger.update(LOG_TO_SHEET, update_row)
+                
     # Register bot commands through the patterns needed to match their flags            
     CMD_ORDER = r"^" + CMD_PREFIX + r"(\[[^\]]*])? (.+)"
     CMD_TURN = r"^" + TURN_PREFIX
@@ -165,14 +177,17 @@ if __name__ == "__main__":
     import datetime
 
     logging.basicConfig(filename="aeldrum-ordersbot.log", level=logging.DEBUG)
-
+    
     # Environment variables needed
     DISCORD_TOKEN = os.getenv("TOKEN")
     ORDERS_CHANNEL_ID = os.getenv("ORDERS_CHANNEL_ID")
     AELDRUM_SERVER_ID = os.getenv("AELDRUM_SERVER_ID")
     _required = (DISCORD_TOKEN, ORDERS_CHANNEL_ID, AELDRUM_SERVER_ID)
 
-    # Configurable prefixes
+    # Configurable stuff
+    # Google Sheet ID or False if you want it off
+    LOG_TO_SHEET = "1RHM0_hfx2pOs6_TrWzCwcN6QLBlSPl42ul6E_UWbR0Y"
+    
     CMD_PREFIX = "!sendorder"
     TURN_PREFIX = "!turn"
     HELP_PREFIX = "!plshelp"
@@ -196,4 +211,8 @@ Happy backstabbing!"""
         print("Please specify TOKEN, AELDRUM_SERVER_ID, and ORDERS_CHANNEL_ID")
     else:
         print("Started bot at %s" % datetime.datetime.now())
+        
+        if LOG_TO_SHEET:
+            import sheetslogger
+            
         client.run(DISCORD_TOKEN)
