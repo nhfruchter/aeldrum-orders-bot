@@ -81,6 +81,13 @@ async def on_message(message):
         else:
             await message.channel.send("Sorry, something went wrong.")
             await message.add_reaction("❌")        
+    
+    async def _myround():
+        specified_round = USER_SPECIFIED_ROUNDS.get(message.author.id)
+        if specified_round:
+            await message.channel.send("%s is sending orders for turn **%s**" % (message.author.display_name, specified_round))
+        else:
+            await message.add_reaction("❌")        
 
     async def _orders():
         parsed = re.findall(CMD_ORDER, message.content, re.IGNORECASE + re.MULTILINE)
@@ -133,12 +140,14 @@ async def on_message(message):
     # Register bot commands through the patterns needed to match their flags            
     CMD_ORDER = r"^" + CMD_PREFIX + r"(\[[^\]]*])? (.+)"
     CMD_ROUND = r"^" + ROUND_PREFIX        
+    CMD_MYROUND = r"^" + re.escape(MYROUND_PREFIX)
     CMD_HELP = r"^" + HELP_PREFIX
 
     # ...and the functions that parse the command
     commands = {
         CMD_ORDER: _orders,
         CMD_ROUND: _round,
+        CMD_MYROUND: _myround,
         CMD_HELP: _help,
     }
 
@@ -162,7 +171,9 @@ if __name__ == "__main__":
     # Configurable prefixes
     CMD_PREFIX = "!sendorder"
     ROUND_PREFIX = "!turn"
+    MYROUND_PREFIX = "?turn"
     HELP_PREFIX = "!plshelp"
+
     HELP_TEXT = """:scroll: **Aeldrum Orders Bot** :pencil2:
     
 • **!sendorder ...** will send an order to the DM channel with all text and attachments. Orders are attributed to your faction as specified by Discord role.
@@ -170,6 +181,7 @@ if __name__ == "__main__":
 
 • **!turn *n*  **specifies a round number which will appear with your order. Rounds are attached to your orders, not your factions or your channels. 
 • **!turn clear** is self-explanatory. 
+• **?turn** will tell you what turn you've specified, if any.
     
 Happy backstabbing!"""
 
