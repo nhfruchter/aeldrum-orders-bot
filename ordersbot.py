@@ -48,45 +48,46 @@ async def on_message(message):
     async def _help():
         await message.channel.send(HELP_TEXT)
     
-    async def _round():
-        round_label = message.content.split(ROUND_PREFIX)
+    async def _turn():
+        turn_label = message.content.split(TURN_PREFIX)
 
-        # If the user just wants to clear their round, do so and exit
-        if round_label[1].strip() == "clear":
+        # If the user just wants to clear their turn, do so and exit
+        if turn_label[1].strip() == "clear":
             await message.add_reaction("✅")
             # Only clear if there's actually something stored
-            if message.author.id in USER_SPECIFIED_ROUNDS:
-                del USER_SPECIFIED_ROUNDS[message.author.id]
+            if message.author.id in USER_SPECIFIED_TURNS:
+                del USER_SPECIFIED_TURNS[message.author.id]
             return
+        elif turn_label[1].strip() == "check":
+          await message.add_reaction("✅")
+          specified_turn = USER_SPECIFIED_TURNS.get(message.author.id)
+          if specified_turn:
+              await message.channel.send("%s is sending orders for turn **%s**" % (message.author.display_name, specified_turn))
+          else:
+              await message.channel.send("%s is sending orders **without** turn data" % message.author.display_name)
+          return
 
-        # Map the user's specified round label to the user - so different users
+        # Map the user's specified turn label to the user - so different users
         # are able to send different things in the same channel.
-        if len(round_label) == 2:
+        if len(turn_label) == 2:
             try:
-                # Get the round number
-                round_label = int(round_label[1].strip())
+                # Get the turn number
+                turn_label = int(turn_label[1].strip())
 
-                if message.author.id in USER_SPECIFIED_ROUNDS:
-                    # If the user has specified a round already, update it
+                if message.author.id in USER_SPECIFIED_TURNS:
+                    # If the user has specified a turn already, update it
                     await message.add_reaction("🔄")
                 else:
                     # Else confirm it
                     await message.add_reaction("✅")
 
-                USER_SPECIFIED_ROUNDS[message.author.id] = round_label
+                USER_SPECIFIED_TURNS[message.author.id] = turn_label
 
             except:
                 await message.channel.send("Turns must be an integer > 0.")
                 await message.add_reaction("❌")
         else:
             await message.channel.send("Sorry, something went wrong.")
-            await message.add_reaction("❌")        
-    
-    async def _myround():
-        specified_round = USER_SPECIFIED_ROUNDS.get(message.author.id)
-        if specified_round:
-            await message.channel.send("%s is sending orders for turn **%s**" % (message.author.display_name, specified_round))
-        else:
             await message.add_reaction("❌")        
 
     async def _orders():
@@ -110,13 +111,13 @@ async def on_message(message):
                 )
             )
 
-            # Get round, if present
-            order_round = USER_SPECIFIED_ROUNDS.get(message.author.id) or ""
+            # Get turn, if present
+            order_turn = USER_SPECIFIED_TURNS.get(message.author.id) or ""
 
             # Create fancy Discord embed
             title = "Order from %s" % affiliation
-            if order_round:
-                title = "*[Turn %s]* " % order_round + title
+            if order_turn:
+                title = "*[Turn %s]* " % order_turn + title
 
             out_message = discord.Embed(title=title, description=content)
 
@@ -139,15 +140,13 @@ async def on_message(message):
 
     # Register bot commands through the patterns needed to match their flags            
     CMD_ORDER = r"^" + CMD_PREFIX + r"(\[[^\]]*])? (.+)"
-    CMD_ROUND = r"^" + ROUND_PREFIX        
-    CMD_MYROUND = r"^" + re.escape(MYROUND_PREFIX)
+    CMD_TURN = r"^" + TURN_PREFIX
     CMD_HELP = r"^" + HELP_PREFIX
 
     # ...and the functions that parse the command
     commands = {
         CMD_ORDER: _orders,
-        CMD_ROUND: _round,
-        CMD_MYROUND: _myround,
+        CMD_TURN: _turn,
         CMD_HELP: _help,
     }
 
@@ -175,8 +174,7 @@ if __name__ == "__main__":
 
     # Configurable prefixes
     CMD_PREFIX = "!sendorder"
-    ROUND_PREFIX = "!turn"
-    MYROUND_PREFIX = "?turn"
+    TURN_PREFIX = "!turn"
     HELP_PREFIX = "!plshelp"
 
     HELP_TEXT = """:scroll: **Aeldrum Orders Bot** :pencil2:
@@ -184,14 +182,14 @@ if __name__ == "__main__":
 • **!sendorder ...** will send an order to the DM channel with all text and attachments. Orders are attributed to your faction as specified by Discord role.
 • **!sendorder[Another Faction] ...** lets attribute your order to a different faction.
 
-• **!turn *n*  **specifies a round number which will appear with your order. Rounds are attached to your orders, not your factions or your channels. 
-• **!turn clear** is self-explanatory. 
-• **?turn** will tell you what turn you've specified, if any.
+• **!turn *n*  **specifies a turn number which will appear with your order. Turns are attached to your user, not your factions or your channels. 
+• **!turn clear** will remove turn data associated with your user. 
+• **!turn check** will tell you what turn you've specified, if any.
     
 Happy backstabbing!"""
 
-    # Holding for !round commands
-    USER_SPECIFIED_ROUNDS = {}
+    # Holding for !turn commands
+    USER_SPECIFIED_TURNS = {}
 
     # All env vars must be present
     if not all(_required):
