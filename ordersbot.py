@@ -146,6 +146,11 @@ async def on_message(message):
         is_match = re.findall(matcher, message.content, re.IGNORECASE + re.MULTILINE)
         if len(is_match):
             await fn()
+            return
+
+    # If user sends invalid command to bot, send help text.
+    if message.channel.type == discord.ChannelType.private:
+      return await _help()
 
 if __name__ == "__main__":
     import logging
