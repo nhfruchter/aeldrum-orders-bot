@@ -46,6 +46,9 @@ async def on_message(message):
         logging.warning("Unable to find channnel " + order_channel_id)
 
     # Only respond to messages starting with the command flags
+    if message.content.startswith(HELP_PREFIX):
+        await message.channel.send(HELP_TEXT)
+    
     if message.content.startswith(ROUND_PREFIX):
         round_label = message.content.split(ROUND_PREFIX)
 
@@ -145,6 +148,16 @@ if __name__ == "__main__":
     # Configurable prefixes
     CMD_PREFIX = "!sendorder"
     ROUND_PREFIX = "!round"
+    HELP_PREFIX = "!plshelp"
+    HELP_TEXT = """:scroll: **Aeldrum Orders Bot** :pencil2:
+    
+• **!sendorder ...** will send an order to the DM channel with all text and attachments. Orders are attributed to your faction as specified by Discord role.
+• **!sendorder[Another Faction] ...** lets attribute your order to a different faction.
+
+• **!round *n*  **specifies a round number which will appear with your order. Rounds are attached to your orders, not your factions or your channels. 
+• **!round clear** is self-explanatory. 
+    
+Happy backstabbing!"""
 
     # Holding for !round commands
     USER_SPECIFIED_ROUNDS = {}
