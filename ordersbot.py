@@ -15,13 +15,6 @@ async def files_from_attachments(attachments):
         files.append(await attachment.to_file())
     return files
 
-
-async def get_default_role(member_id):
-    server = client.get_guild(int(AELDRUM_SERVER_ID))
-    member = server.get_member(member_id)
-    return member.top_role
-
-
 @client.event
 async def on_message(message):
     """Handle each incoming message."""
@@ -31,9 +24,8 @@ async def on_message(message):
         return
 
     # Accept requests only from valid sources
-    if message.channel.type != discord.ChannelType.private and message.guild.id != int(
-        AELDRUM_SERVER_ID
-    ):
+    if (message.channel.type != discord.ChannelType.private and 
+        message.guild.id != int(AELDRUM_SERVER_ID)):
         return
 
     # Identify the channel that orders will be sent to
@@ -42,8 +34,14 @@ async def on_message(message):
 
     # Error message if order channel is not set
     if order_channel == None:
-        await message.channel.send("Could not find channel " + order_channel_id)
-        logging.warning("Unable to find channnel " + order_channel_id)
+        await message.channel.send("Could not find order channel " + order_channel_id)
+        logging.warning("Unable to find order channnel " + order_channel_id)
+
+    requestor = client.get_guild(int(AELDRUM_SERVER_ID)).get_member(message.author.id)
+    if requestor == None:
+      await message.channel.send(
+        "Are you a member of the Aeldrum server? Member ID: " + message.author.id)
+      return
 
     async def _help():
         await message.channel.send(HELP_TEXT)
@@ -57,8 +55,8 @@ async def on_message(message):
         if turn_cmd[1] == "clear":
             await message.add_reaction("✅")
             # Only clear if there's actually something stored
-            if message.author.id in USER_SPECIFIED_TURNS:
-                del USER_SPECIFIED_TURNS[message.author.id]
+            if requestor.id in USER_SPECIFIED_TURNS:
+                del USER_SPECIFIED_TURNS[requestor.id]
             return
         elif turn_cmd[1] == "check":
           await message.add_reaction("✅")
@@ -69,7 +67,8 @@ async def on_message(message):
           elif default_turn:
             await message.channel.send("%s is sending orders for turn **%s** (default)" % (message.author.display_name, default_turn))
           else:
-              await message.channel.send("%s is sending orders **without** turn data" % message.author.display_name)
+              await message.channel.send(
+                "%s is sending orders **without** turn data" % requestor.display_name)
           return
         elif turn_cmd[1] == "default":
           if len(turn_cmd) != 3:
@@ -90,7 +89,6 @@ async def on_message(message):
           except:
             await message.channel.send("Turns must be an integer > 0.")
             await message.add_reaction("❌") 
-          
         else:
           if len(turn_cmd) != 2:
             return await _help()
@@ -128,9 +126,7 @@ async def on_message(message):
             affiliation = (
                 args[0].replace("[", "").replace("]", "")
                 if args[0]
-                else getattr(
-                    message.author, "top_role", await get_default_role(message.author.id)
-                )
+                else requestor.top_role
             )
 
             # Get turn, if present
@@ -148,12 +144,12 @@ async def on_message(message):
 
             # Set embed author to sender
             out_message.set_author(
-                name=message.author.display_name, icon_url=message.author.avatar_url
+                name=requestor.display_name, icon_url=requestor.avatar_url
             )
 
             logging.debug(
                 "%s, %s, %s, files: %s",
-                message.author.display_name,
+                requestor.display_name,
                 affiliation,
                 content,
                 len(files),
@@ -168,7 +164,7 @@ async def on_message(message):
                     datetime.datetime.now().strftime("%x %X"),
                     order_turn,
                     str(affiliation),
-                    message.author.display_name,
+                    requestor.display_name,
                     content,
                     " ".join([a.url for a in message.attachments]) or ""
                 ]
@@ -190,8 +186,7 @@ async def on_message(message):
     for matcher, fn in commands.items():
         is_match = re.findall(matcher, message.content, re.IGNORECASE + re.MULTILINE)
         if len(is_match):
-            await fn()
-            return
+            return await fn()
 
     # If user sends invalid command to bot, send help text.
     if message.channel.type == discord.ChannelType.private:
