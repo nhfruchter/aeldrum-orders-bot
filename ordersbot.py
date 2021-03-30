@@ -47,47 +47,68 @@ async def on_message(message):
         await message.channel.send(HELP_TEXT)
     
     async def _turn():
-        turn_label = message.content.split(TURN_PREFIX)
-
+        turn_cmd = message.content.split()
+        if len(turn_cmd) < 2 or turn_cmd[0] != TURN_PREFIX:
+          return await _help()
+        
         # If the user just wants to clear their turn, do so and exit
-        if turn_label[1].strip() == "clear":
+        if turn_cmd[1] == "clear":
             await message.add_reaction("✅")
             # Only clear if there's actually something stored
             if requestor.id in USER_SPECIFIED_TURNS:
                 del USER_SPECIFIED_TURNS[requestor.id]
             return
-        elif turn_label[1].strip() == "check":
+        elif turn_cmd[1] == "check":
           await message.add_reaction("✅")
-          specified_turn = USER_SPECIFIED_TURNS.get(requestor.id)
+          specified_turn = USER_SPECIFIED_TURNS.get(message.author.id)
+          default_turn = USER_SPECIFIED_TURNS.get(DEFAULT_USER)
           if specified_turn:
-              await message.channel.send("%s is sending orders for turn **%s**" % (requestor.display_name, specified_turn))
+            await message.channel.send("%s is sending orders for turn **%s**" % (message.author.display_name, specified_turn))
+          elif default_turn:
+            await message.channel.send("%s is sending orders for turn **%s** (default)" % (message.author.display_name, default_turn))
           else:
               await message.channel.send(
                 "%s is sending orders **without** turn data" % requestor.display_name)
           return
+        elif turn_cmd[1] == "default":
+          if len(turn_cmd) != 3:
+            return await _help()
+        
+          try:
+            # Get the turn number
+            turn_label = int(turn_cmd[2])
+            if DEFAULT_USER in USER_SPECIFIED_TURNS:
+               # If the user has specified a turn already, update it
+               await message.add_reaction("🔄")
+            else:
+               # Else confirm it
+               await message.add_reaction("✅")
 
-        # Map the user's specified turn label to the user - so different users
-        # are able to send different things in the same channel.
-        if len(turn_label) == 2:
-            try:
-                # Get the turn number
-                turn_label = int(turn_label[1].strip())
+               USER_SPECIFIED_TURNS[DEFAULT_USER] = turn_label
 
-                if requestor.id in USER_SPECIFIED_TURNS:
-                    # If the user has specified a turn already, update it
-                    await message.add_reaction("🔄")
-                else:
-                    # Else confirm it
-                    await message.add_reaction("✅")
-
-                USER_SPECIFIED_TURNS[requestor.id] = turn_label
-
-            except:
-                await message.channel.send("Turns must be an integer > 0.")
-                await message.add_reaction("❌")
+          except:
+            await message.channel.send("Turns must be an integer > 0.")
+            await message.add_reaction("❌") 
         else:
-            await message.channel.send("Sorry, something went wrong.")
-            await message.add_reaction("❌")        
+          if len(turn_cmd) != 2:
+            return await _help()
+        
+          try:
+           # Get the turn number
+           turn_label = int(turn_cmd[1])
+
+           if message.author.id in USER_SPECIFIED_TURNS:
+             # If the user has specified a turn already, update it
+             await message.add_reaction("🔄")
+           else:
+             # Else confirm it
+             await message.add_reaction("✅")
+
+             USER_SPECIFIED_TURNS[message.author.id] = turn_label
+
+          except:
+            await message.channel.send("Turns must be an integer > 0.")
+            await message.add_reaction("❌")     
 
     async def _orders():
         parsed = re.findall(CMD_ORDER, message.content, re.IGNORECASE + re.MULTILINE)
@@ -109,7 +130,10 @@ async def on_message(message):
             )
 
             # Get turn, if present
-            order_turn = USER_SPECIFIED_TURNS.get(requestor.id) or ""
+            order_turn = (
+              USER_SPECIFIED_TURNS.get(message.author.id) or 
+              USER_SPECIFIED_TURNS.get(DEFAULT_USER) or ""
+            )
 
             # Create fancy Discord embed
             title = "Order from %s" % affiliation
@@ -196,10 +220,12 @@ if __name__ == "__main__":
 • **!turn *n*  **specifies a turn number which will appear with your order. Turns are attached to your user, not your factions or your channels. 
 • **!turn clear** will remove turn data associated with your user. 
 • **!turn check** will tell you what turn you've specified, if any.
+• **!turn default *n* **specifies a default turn that applies to all users without an explicitly set turn.
     
 Happy backstabbing!"""
 
-    # Holding for !turn commands
+    # Holding for !turn commands.  Default value uses user 0.
+    DEFAULT_USER = 0
     USER_SPECIFIED_TURNS = {}
 
     # All env vars must be present
