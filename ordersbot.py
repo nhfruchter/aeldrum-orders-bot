@@ -40,7 +40,7 @@ async def on_message(message):
     requestor = client.get_guild(int(AELDRUM_SERVER_ID)).get_member(message.author.id)
     if requestor == None:
       await message.channel.send(
-        "Are you a member of the Aeldrum server? Member ID: " + message.author.id)
+        "Are you a member of the Aeldrum server? Member ID: " + str(message.author.id))
       return
 
     async def _help():
@@ -60,12 +60,12 @@ async def on_message(message):
             return
         elif turn_cmd[1] == "check":
           await message.add_reaction("✅")
-          specified_turn = USER_SPECIFIED_TURNS.get(message.author.id)
+          specified_turn = USER_SPECIFIED_TURNS.get(requestor.id)
           default_turn = USER_SPECIFIED_TURNS.get(DEFAULT_USER)
           if specified_turn:
-            await message.channel.send("%s is sending orders for turn **%s**" % (message.author.display_name, specified_turn))
+            await message.channel.send("%s is sending orders for turn **%s**" % (requestor.display_name, specified_turn))
           elif default_turn:
-            await message.channel.send("%s is sending orders for turn **%s** (default)" % (message.author.display_name, default_turn))
+            await message.channel.send("%s is sending orders for turn **%s** (default)" % (requestor.display_name, default_turn))
           else:
               await message.channel.send(
                 "%s is sending orders **without** turn data" % requestor.display_name)
@@ -73,6 +73,12 @@ async def on_message(message):
         elif turn_cmd[1] == "default":
           if len(turn_cmd) != 3:
             return await _help()
+
+          if (turn_cmd[2] == "clear"):
+            await message.add_reaction("✅")
+            if DEFAULT_USER in USER_SPECIFIED_TURNS:
+              del USER_SPECIFIED_TURNS[DEFAULT_USER]
+            return
         
           try:
             # Get the turn number
@@ -80,12 +86,11 @@ async def on_message(message):
             if DEFAULT_USER in USER_SPECIFIED_TURNS:
                # If the user has specified a turn already, update it
                await message.add_reaction("🔄")
+               USER_SPECIFIED_TURNS[DEFAULT_USER] = turn_label
             else:
                # Else confirm it
                await message.add_reaction("✅")
-
                USER_SPECIFIED_TURNS[DEFAULT_USER] = turn_label
-
           except:
             await message.channel.send("Turns must be an integer > 0.")
             await message.add_reaction("❌") 
@@ -97,14 +102,14 @@ async def on_message(message):
            # Get the turn number
            turn_label = int(turn_cmd[1])
 
-           if message.author.id in USER_SPECIFIED_TURNS:
+           if requestor.id in USER_SPECIFIED_TURNS:
              # If the user has specified a turn already, update it
              await message.add_reaction("🔄")
            else:
              # Else confirm it
              await message.add_reaction("✅")
 
-             USER_SPECIFIED_TURNS[message.author.id] = turn_label
+             USER_SPECIFIED_TURNS[requestor.id] = turn_label
 
           except:
             await message.channel.send("Turns must be an integer > 0.")
@@ -131,7 +136,7 @@ async def on_message(message):
 
             # Get turn, if present
             order_turn = (
-              USER_SPECIFIED_TURNS.get(message.author.id) or 
+              USER_SPECIFIED_TURNS.get(requestor.id) or 
               USER_SPECIFIED_TURNS.get(DEFAULT_USER) or ""
             )
 
@@ -221,6 +226,8 @@ if __name__ == "__main__":
 • **!turn clear** will remove turn data associated with your user. 
 • **!turn check** will tell you what turn you've specified, if any.
 • **!turn default *n* **specifies a default turn that applies to all users without an explicitly set turn.
+• **!turn default clear** removes turn data associated with the default turn.
+
     
 Happy backstabbing!"""
 
