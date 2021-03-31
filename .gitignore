@@ -127,3 +127,4 @@ credentials.json
 token.json
 Pipfile.lock
 Pipfile
+*.sqlite
