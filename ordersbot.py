@@ -214,8 +214,8 @@ if __name__ == "__main__":
 
     # Configurable stuff
     # Google Sheet ID or False if you want it off
-    # LOG_TO_SHEET = "1RHM0_hfx2pOs6_TrWzCwcN6QLBlSPl42ul6E_UWbR0Y"
-    LOG_TO_SHEET = False
+    LOG_TO_SHEET = "1RHM0_hfx2pOs6_TrWzCwcN6QLBlSPl42ul6E_UWbR0Y"
+    # LOG_TO_SHEET = False
     
     CMD_PREFIX = "!sendorder"
     TURN_PREFIX = "!turn"
