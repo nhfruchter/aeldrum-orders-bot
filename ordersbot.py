@@ -119,10 +119,12 @@ async def on_message(message):
         parsed = re.findall(CMD_ORDER, message.content, re.IGNORECASE + re.MULTILINE)
 
         if len(parsed):
-            # args[0] = blank if no alt affiliation, args[1] = message
+            # args[0] = blank if no alt affiliation
             args = parsed[0]
-            content = args[1].strip()
-
+            # Handle multiline messages by removing the command from the message content instead of 
+            # relying on regex output
+            content = re.sub(r"^" + CMD_PREFIX + r"(\[[^\]]*])?", "", message.content).strip()
+            
             # Grab the files, if any
             files = await files_from_attachments(message.attachments)
 
@@ -177,7 +179,7 @@ async def on_message(message):
                 sheetslogger.update(LOG_TO_SHEET, update_row)
                 
     # Register bot commands through the patterns needed to match their flags            
-    CMD_ORDER = r"^" + CMD_PREFIX + r"(\[[^\]]*])? (.+)"
+    CMD_ORDER = r"^" + CMD_PREFIX + r"(\[[^\]]*])?((?:\s+?\n+?)?.+)?"
     CMD_TURN = r"^" + TURN_PREFIX
     CMD_HELP = r"^" + HELP_PREFIX
 
@@ -207,16 +209,19 @@ if __name__ == "__main__":
     DISCORD_TOKEN = os.getenv("TOKEN")
     ORDERS_CHANNEL_ID = os.getenv("ORDERS_CHANNEL_ID")
     AELDRUM_SERVER_ID = os.getenv("AELDRUM_SERVER_ID")
+    DEBUG = os.getenv("DEBUG")
     _required = (DISCORD_TOKEN, ORDERS_CHANNEL_ID, AELDRUM_SERVER_ID)
 
     # Configurable stuff
     # Google Sheet ID or False if you want it off
-    LOG_TO_SHEET = "1RHM0_hfx2pOs6_TrWzCwcN6QLBlSPl42ul6E_UWbR0Y"
+    # LOG_TO_SHEET = "1RHM0_hfx2pOs6_TrWzCwcN6QLBlSPl42ul6E_UWbR0Y"
+    LOG_TO_SHEET = False
     
     CMD_PREFIX = "!sendorder"
     TURN_PREFIX = "!turn"
     HELP_PREFIX = "!plshelp"
 
+    # Help text string
     HELP_TEXT = """:scroll: **Aeldrum Orders Bot** :pencil2:
     
 • **!sendorder ...** will send an order to the DM channel with all text and attachments. Orders are attributed to your faction as specified by Discord role.
@@ -230,6 +235,9 @@ if __name__ == "__main__":
 
     
 Happy backstabbing!"""
+
+    # Debug flag
+    if DEBUG: HELP_TEXT = "host [%s %s] %s" % ( os.uname().nodename, os.uname().release, HELP_TEXT )
 
     # Holding for !turn commands.  Default value uses user 0.
     DEFAULT_USER = 0
