@@ -308,5 +308,9 @@ if __name__ == "__main__":
         if LOG_TO_SHEET:
             import sheetslogger
             logging.info("Logging to Google Sheet ID %s" % LOG_TO_SHEET)
+            try:
+                sheetslogger.update(LOG_TO_SHEET, [datetime.datetime.now().strftime("%x %X"), "Bot enabled", "", "", "", ""])
+            except:
+                raise Exception("There was an error communicating with Google Sheets.")                    
 
         client.run(DISCORD_TOKEN)
